@@ -407,20 +407,25 @@ module Geokit
       # Supports viewport/country code biasing
       #
       # ==== OPTIONS
-      # * :bias - This option makes the Google Geocoder return results biased to a particular
-      #           country or viewport. Country code biasing is achieved by passing the ccTLD
-      #           ('uk' for .co.uk, for example) as a :bias value. For a list of ccTLD's, 
-      #           look here: http://en.wikipedia.org/wiki/CcTLD. By default, the geocoder
-      #           will be biased to results within the US (ccTLD .com).
+      # * :bias     - This option makes the Google Geocoder return results biased to a particular
+      #               country or viewport. Country code biasing is achieved by passing the ccTLD
+      #               ('uk' for .co.uk, for example) as a :bias value. For a list of ccTLD's, 
+      #               look here: http://en.wikipedia.org/wiki/CcTLD. By default, the geocoder
+      #               will be biased to results within the US (ccTLD .com).
       #
-      #           If you'd like the Google Geocoder to prefer results within a given viewport,
-      #           you can pass a Geokit::Bounds object as the :bias value.
+      #               If you'd like the Google Geocoder to prefer results within a given viewport,
+      #               you can pass a Geokit::Bounds object as the :bias value.
+      #
+      # * :language - This option makes Google Geocoder return resulting data in given languag.
+      #               For example provide "pl" for results in Polish or "de" for German.
       #
       # ==== EXAMPLES
       # # By default, the geocoder will return Syracuse, NY
       # Geokit::Geocoders::GoogleGeocoder.geocode('Syracuse').country_code # => 'US'
       # # With country code biasing, it returns Syracuse in Sicily, Italy
       # Geokit::Geocoders::GoogleGeocoder.geocode('Syracuse', :bias => :it).country_code # => 'IT'
+      # # With results in given language
+      # Geokit::Geocoders::GoogleGeocoder.geocode('Szczecin').full_address # => 'Stetin, Polen'
       #
       # # By default, the geocoder will return Winnetka, IL
       # Geokit::Geocoders::GoogleGeocoder.geocode('Winnetka').state # => 'IL'
@@ -429,8 +434,9 @@ module Geokit
       # Geokit::Geocoders::GoogleGeocoder.geocode('Winnetka', :bias => bounds).state # => 'CA'
       def self.do_geocode(address, options = {})
         bias_str = options[:bias] ? construct_bias_string_from_options(options[:bias]) : ''
+        lang_str = options[:language] ? "&hl=#{options[:language]}" : ''
         address_str = address.is_a?(GeoLoc) ? address.to_geocodeable_s : address
-        res = self.call_geocoder_service("http://maps.google.com/maps/geo?q=#{Geokit::Inflector::url_escape(address_str)}&output=xml#{bias_str}&key=#{Geokit::Geocoders::google}&oe=utf-8")
+        res = self.call_geocoder_service("http://maps.google.com/maps/geo?q=#{Geokit::Inflector::url_escape(address_str)}&output=xml#{bias_str}#{lang_str}&key=#{Geokit::Geocoders::google}&oe=utf-8")
         return GeoLoc.new if !res.is_a?(Net::HTTPSuccess)
         xml = res.body
         logger.debug "Google geocoding. Address: #{address}. Result: #{xml}"
@@ -446,7 +452,7 @@ module Geokit
           "&ll=#{bias.center.ll}&spn=#{bias.to_span.ll}"
         end
       end
-      
+    
       def self.xml2GeoLoc(xml, address="")
         doc=REXML::Document.new(xml)
 

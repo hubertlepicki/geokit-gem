@@ -24,6 +24,10 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
   <?xml version="1.0" encoding="UTF-8" ?><kml xmlns="http://earth.google.com/kml/2.0"><Response><name>Syracuse</name><Status><code>200</code><request>geocode</request></Status><Placemark id="p1"><address>Syracuse, Italy</address><AddressDetails Accuracy="3" xmlns="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0"><Country><CountryNameCode>IT</CountryNameCode><CountryName>Italy</CountryName><AdministrativeArea><AdministrativeAreaName>Sicily</AdministrativeAreaName><SubAdministrativeArea><SubAdministrativeAreaName>Syracuse</SubAdministrativeAreaName></SubAdministrativeArea></AdministrativeArea></Country></AddressDetails><ExtendedData><LatLonBox north="37.4125978" south="36.6441736" east="15.3367367" west="14.7724913" /></ExtendedData><Point><coordinates>14.9856176,37.0630218,0</coordinates></Point></Placemark></Response></kml>
   EOF
   
+  GOOGLE_REQUESTED_LANGUAGE_RESULT = <<-EOF.strip
+  <?xml version="1.0" encoding="UTF-8" ?><kml xmlns="http://earth.google.com/kml/2.0"><Response><name>Syracuse</name><Status><code>200</code><request>geocode</request></Status><Placemark id="p1"><address>Stetin, Polen</address><AddressDetails Accuracy="3" xmlns="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0"><Country><CountryNameCode>PL</CountryNameCode><CountryName>Polen</CountryName><AdministrativeArea><AdministrativeAreaName>Westpommern</AdministrativeAreaName><SubAdministrativeArea><SubAdministrativeAreaName>Syracuse</SubAdministrativeAreaName></SubAdministrativeArea></AdministrativeArea></Country></AddressDetails><ExtendedData><LatLonBox north="37.4125978" south="36.6441736" east="15.3367367" west="14.7724913" /></ExtendedData><Point><coordinates>14.9856176,37.0630218,0</coordinates></Point></Placemark></Response></kml>
+  EOF
+ 
   GOOGLE_BOUNDS_BIASED_RESULT = <<-EOF.strip
   <?xml version="1.0" encoding="UTF-8" ?><kml xmlns="http://earth.google.com/kml/2.0"><Response><name>Winnetka</name><Status><code>200</code><request>geocode</request></Status><Placemark id="p1"><address>Winnetka, California, USA</address><AddressDetails Accuracy="4" xmlns="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0"><Country><CountryNameCode>US</CountryNameCode><CountryName>USA</CountryName><AdministrativeArea><AdministrativeAreaName>CA</AdministrativeAreaName><AddressLine>Winnetka</AddressLine></AdministrativeArea></Country></AddressDetails><ExtendedData><LatLonBox north="34.2353090" south="34.1791050" east="-118.5534191" west="-118.5883200" /></ExtendedData><Point><coordinates>-118.5710220,34.2131710,0</coordinates></Point></Placemark></Response></kml>
   EOF
@@ -200,7 +204,18 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
     assert_equal 'IT', biased_result.country_code
     assert_equal 'Sicily', biased_result.state
   end
-  
+ 
+  def test_requested_language_selection
+    response = MockSuccess.new
+    response.expects(:body).returns(GOOGLE_REQUESTED_LANGUAGE_RESULT)
+    
+    url = "http://maps.google.com/maps/geo?q=Szczecin&output=xml&hl=de&key=Google&oe=utf-8"
+    Geokit::Geocoders::GoogleGeocoder.expects(:call_geocoder_service).with(url).returns(response)
+    biased_result = Geokit::Geocoders::GoogleGeocoder.geocode('Szczecin', :language => 'de')
+    
+    assert_equal 'Stetin, Polen', biased_result.full_address
+  end
+ 
   def test_bounds_biasing
     response = MockSuccess.new
     response.expects(:body).returns(GOOGLE_BOUNDS_BIASED_RESULT)
